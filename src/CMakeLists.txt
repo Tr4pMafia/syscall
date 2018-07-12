@@ -22,6 +22,7 @@ project(starter_vmm C CXX)
 include(${SOURCE_CMAKE_DIR}/project.cmake)
 init_project()
 
+include_directories(./include)
 add_vmm_executable(starter_vmm
     SOURCES trap.cpp
 )

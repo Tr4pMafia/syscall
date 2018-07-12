@@ -16,6 +16,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+
 vmm_extension(
     mafia_starter
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src

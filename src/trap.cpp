@@ -6,6 +6,7 @@
 #include <bfgsl.h>
 #include <bfstring.h>
 #include <string>
+#include "asm.h"
 
 namespace mafia
 {
@@ -178,6 +179,8 @@ public:
     : bfvmm::intel_x64::vcpu{id}
     {
         m_exit_handler_mafia = std::make_unique<mafia::intel_x64::exit_handler_mafia>(vmcs());
+        uint64_t lstar = exec_rdmsr(::x64::msrs::ia32_lstar::addr);
+        bfdebug_nhex(0, "lstar", lstar);
     }
     ~mafia_vcpu() = default;
     mafia::intel_x64::exit_handler_mafia *exit_handler()
