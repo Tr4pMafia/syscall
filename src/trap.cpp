@@ -195,9 +195,9 @@ public:
     : bfvmm::intel_x64::vcpu{id}
     {
         // trap page fault
-        :intel_x64::vmcs::exception_bitmap::set((1u << 14));
+        ::intel_x64::vmcs::exception_bitmap::set((1u << 14));
 
-        ia32_lstar = ::x64::msrs::ia32_lstar::get();
+        uint64_t ia32_lstar = ::x64::msrs::ia32_lstar::get();
         bfdebug_nhex(0, "lstar", ia32_lstar);
         mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
 
