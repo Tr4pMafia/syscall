@@ -197,6 +197,20 @@ public:
         // trap page fault
         ::intel_x64::vmcs::exception_bitmap::set((1u << 14));
 
+        // dump vmcs
+        ::intel_x64::vmcs::page_fault_error_code_mask::dump(0);
+        ::intel_x64::vmcs::page_fault_error_code_match::dump(0);
+
+        // trap page fault when I/D flag is present
+        //"the access causing the page-fault exception was an instruction fetch"
+        ::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
+        ::intel_x64::vmcs::page_fault_error_code_match::set((1u << 4));
+
+        //dump vmcs
+        ::intel_x64::vmcs::page_fault_error_code_mask::dump(0);
+        ::intel_x64::vmcs::page_fault_error_code_match::dump(0);
+
+        // save original ia32_lstar
         uint64_t ia32_lstar = ::x64::msrs::ia32_lstar::get();
         bfdebug_nhex(0, "lstar", ia32_lstar);
         mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
