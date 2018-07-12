@@ -45,7 +45,7 @@ emulate_rdmsr(::x64::msrs::field_type msr)
 
         case ::x64::msrs::ia32_lstar::addr:
             bfdebug_info(0, "[MAFIA] ia32_lstar RDMSR");
-            return ::x64::vmcs::ia32_lstar::get();
+            return ::x64::msrs::ia32_lstar::get();
 
         default:
             return ::intel_x64::msrs::get(msr);
@@ -110,7 +110,7 @@ emulate_wrmsr(::x64::msrs::field_type msr, ::x64::msrs::value_type val)
             return;
         case ::x64::msrs::ia32_lstar::addr:
             bfdebug_info(0, "[MAFIA] ia32_lstar WRMSR");
-            ::x64::vmcs::ia32_lstar::set(val);
+            ::x64::msrs::ia32_lstar::set(val);
             return;
 
         default:
