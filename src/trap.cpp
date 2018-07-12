@@ -13,7 +13,7 @@ namespace intel_x64
 {
 
 ::x64::msrs::value_type
-emulate_rdmsr(::x64::msrs::field_type msr)
+emulate_rdmsr_mafia(::x64::msrs::field_type msr)
 {
     switch (msr) {
         case ::intel_x64::msrs::ia32_debugctl::addr:
@@ -70,7 +70,7 @@ emulate_rdmsr(::x64::msrs::field_type msr)
 }
 
 void
-emulate_wrmsr(::x64::msrs::field_type msr, ::x64::msrs::value_type val)
+emulate_wrmsr_mafia(::x64::msrs::field_type msr, ::x64::msrs::value_type val)
 {
     switch (msr) {
         case ::intel_x64::msrs::ia32_debugctl::addr:
@@ -119,6 +119,34 @@ emulate_wrmsr(::x64::msrs::field_type msr, ::x64::msrs::value_type val)
     }
 }
 
+static bool
+handle_rdmsr_mafia(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+{
+    auto val = emulate_rdmsr_mafia(
+                   gsl::narrow_cast<::x64::msrs::field_type>(vmcs->save_state()->rcx)
+               );
+
+    vmcs->save_state()->rax = ((val >> 0x00) & 0x00000000FFFFFFFF);
+    vmcs->save_state()->rdx = ((val >> 0x20) & 0x00000000FFFFFFFF);
+
+    return advance(vmcs);
+}
+
+static bool
+handle_wrmsr_mafia(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+{
+    auto val = 0ULL;
+
+    val |= ((vmcs->save_state()->rax & 0x00000000FFFFFFFF) << 0x00);
+    val |= ((vmcs->save_state()->rdx & 0x00000000FFFFFFFF) << 0x20);
+
+    emulate_wrmsr_mafia(
+        gsl::narrow_cast<::x64::msrs::field_type>(vmcs->save_state()->rcx),
+        val
+    );
+
+    return advance(vmcs);
+}
 class exit_handler_mafia : public bfvmm::intel_x64::exit_handler
 {
 public:
@@ -127,11 +155,16 @@ public:
     {
         using namespace ::intel_x64::vmcs;
         bfdebug_info(0, "mafia hype you");
-        /*
+
         add_handler(
             exit_reason::basic_exit_reason::rdmsr,
-            handler_delegate_t::create<mafia::intel_x64::handle_syscall>()
-        );*/
+            handler_delegate_t::create<handle_rdmsr_mafia>()
+        );
+
+        add_handler(
+            exit_reason::basic_exit_reason::wrmsr,
+            handler_delegate_t::create<handle_wrmsr_mafia>()
+        );
     }
     ~exit_handler_mafia() = default;
 };
