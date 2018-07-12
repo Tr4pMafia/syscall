@@ -6,12 +6,21 @@
 #include <bfgsl.h>
 #include <bfstring.h>
 #include <string>
-#include "asm.h"
 
 namespace mafia
 {
 namespace intel_x64
 {
+
+static const uint64_t yaju = 0x114514ULL;
+static uint64_t original_ia32_lstar[4];
+
+bool
+advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
+{
+    vmcs->save_state()->rip = mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid];
+    return true;
+}
 
 ::x64::msrs::value_type
 emulate_rdmsr_mafia(::x64::msrs::field_type msr)
@@ -51,16 +60,6 @@ emulate_rdmsr_mafia(::x64::msrs::field_type msr)
 
         default:
             return ::intel_x64::msrs::get(msr);
-
-        // QUIRK:
-        //
-        // The following is specifically for CPU-Z. For whatever reason, it is
-        // reading the following undefined MSRs, which causes the system to
-        // freeze since attempting to read these MSRs in the exit handler
-        // will cause a GPF which is not being caught. The result is, the core
-        // that runs RDMSR on these freezes, the other cores receive an
-        // INIT signal to reset, and the system dies.
-        //
 
         case 0x31:
         case 0x39:
@@ -150,6 +149,18 @@ handle_wrmsr_mafia(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
 
     return advance(vmcs);
 }
+
+static bool
+handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+{
+    uint64_t cr2 = ::intel_x64::cr2::get();
+    if(cr2 == mafia::intel_x64::yaju) {
+        bfdebug_info(0, "syscall happend!");
+        return advance4syscall(vmcs);
+    }
+    return advance(vmcs);
+}
+
 class exit_handler_mafia : public bfvmm::intel_x64::exit_handler
 {
 public:
@@ -168,6 +179,11 @@ public:
             exit_reason::basic_exit_reason::wrmsr,
             handler_delegate_t::create<handle_wrmsr_mafia>()
         );
+
+        add_handler(
+            exit_reason::basic_exit_reason::exception_or_non_maskable_interrupt,
+            handler_delegate_t::create<mafia::intel_x64::handle_exception_or_non_maskable_interrupt>()
+        );
     }
     ~exit_handler_mafia() = default;
 };
@@ -178,16 +194,24 @@ public:
     mafia_vcpu(vcpuid::type id)
     : bfvmm::intel_x64::vcpu{id}
     {
-        m_exit_handler_mafia = std::make_unique<mafia::intel_x64::exit_handler_mafia>(vmcs());
-        ia32_lstar = exec_rdmsr(::x64::msrs::ia32_lstar::addr);
+        // trap page fault
+        :intel_x64::vmcs::exception_bitmap::set((1u << 14));
+
+        ia32_lstar = ::x64::msrs::ia32_lstar::get();
         bfdebug_nhex(0, "lstar", ia32_lstar);
+        mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
+
+        //change ia32_lstar to MAGIC VALUE
+        // so that PF happen when syscall
+        //::x64::msrs::ia32_lstar::set(mafia::intel_x64::yaju);
+
+        m_exit_handler_mafia = std::make_unique<mafia::intel_x64::exit_handler_mafia>(vmcs());
     }
     ~mafia_vcpu() = default;
     mafia::intel_x64::exit_handler_mafia *exit_handler()
     { return m_exit_handler_mafia.get(); }
 private:
     std::unique_ptr<mafia::intel_x64::exit_handler_mafia> m_exit_handler_mafia;
-    uint64_t ia32_lstar;
 };
 }
 }
