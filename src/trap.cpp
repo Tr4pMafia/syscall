@@ -35,6 +35,7 @@ emulate_rdmsr_mafia(::x64::msrs::field_type msr)
             return ::intel_x64::vmcs::guest_ia32_sysenter_esp::get();
 
         case ::intel_x64::msrs::ia32_sysenter_eip::addr:
+            bfdebug_info(0, "[MAFIA] ia32_sysenter_eip RDMSR");
             return ::intel_x64::vmcs::guest_ia32_sysenter_eip::get();
 
         case ::intel_x64::msrs::ia32_fs_base::addr:
@@ -98,6 +99,7 @@ emulate_wrmsr_mafia(::x64::msrs::field_type msr, ::x64::msrs::value_type val)
             return;
 
         case ::intel_x64::msrs::ia32_sysenter_eip::addr:
+            bfdebug_info(0, "[MAFIA] ia32_sysenter_eip WRMSR");
             ::intel_x64::vmcs::guest_ia32_sysenter_eip::set(val);
             return;
 
