@@ -179,14 +179,15 @@ public:
     : bfvmm::intel_x64::vcpu{id}
     {
         m_exit_handler_mafia = std::make_unique<mafia::intel_x64::exit_handler_mafia>(vmcs());
-        uint64_t lstar = exec_rdmsr(::x64::msrs::ia32_lstar::addr);
-        bfdebug_nhex(0, "lstar", lstar);
+        ia32_lstar = exec_rdmsr(::x64::msrs::ia32_lstar::addr);
+        bfdebug_nhex(0, "lstar", ia32_lstar);
     }
     ~mafia_vcpu() = default;
     mafia::intel_x64::exit_handler_mafia *exit_handler()
     { return m_exit_handler_mafia.get(); }
 private:
     std::unique_ptr<mafia::intel_x64::exit_handler_mafia> m_exit_handler_mafia;
+    uint64_t ia32_lstar;
 };
 }
 }
