@@ -38,6 +38,7 @@ advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
     vmcs->save_state()->rip = mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid];
     return true;
 }
+
 static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
 {
@@ -46,6 +47,13 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
         bfdebug_info(0, "syscall happend!");
         return advance4syscall(vmcs);
     }
+    return advance(vmcs);
+}
+
+static bool
+handle_init_signal(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+{
+    // [NOTE] do nothing here, but is it correct??
     return advance(vmcs);
 }
 
@@ -58,6 +66,11 @@ public:
         exit_handler()->add_handler(
             ::intel_x64::vmcs::exit_reason::basic_exit_reason::exception_or_non_maskable_interrupt,
             handler_delegate_t::create<mafia::intel_x64::handle_exception_or_non_maskable_interrupt>()
+        );
+
+        exit_handler()->add_handler(
+            ::intel_x64::vmcs::exit_reason::basic_exit_reason::init_signal,
+            handler_delegate_t::create<mafia::intel_x64::handle_init_signal>()
         );
 
         // trap page fault
