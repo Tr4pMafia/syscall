@@ -96,7 +96,7 @@ public:
 
         //change ia32_lstar to MAGIC VALUE
         // so that PF happen when syscall
-        //::x64::msrs::ia32_lstar::set(mafia::intel_x64::yaju);
+        ::x64::msrs::ia32_lstar::set(MAGIC_LSTAR_VALUE);
     }
     ~mafia_vcpu() = default;
 };
