@@ -43,7 +43,7 @@ static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
 {
     uint64_t cr2 = ::intel_x64::cr2::get();
-    if(cr2 == mafia::intel_x64::yaju) {
+    if(cr2 == MAGIC_LSTAR_VALUE) {
         bfdebug_info(0, "syscall happend!");
         return advance4syscall(vmcs);
     }
