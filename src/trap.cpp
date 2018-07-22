@@ -38,14 +38,22 @@ advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
     vmcs->save_state()->rip = mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid];
     return true;
 }
+
 static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
 {
     uint64_t cr2 = ::intel_x64::cr2::get();
-    if(cr2 == mafia::intel_x64::yaju) {
+    if(cr2 == MAGIC_LSTAR_VALUE) {
         bfdebug_info(0, "syscall happend!");
         return advance4syscall(vmcs);
     }
+    return advance(vmcs);
+}
+
+static bool
+handle_init_signal(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+{
+    // [NOTE] do nothing here, but is it correct??
     return advance(vmcs);
 }
 
@@ -58,6 +66,11 @@ public:
         exit_handler()->add_handler(
             ::intel_x64::vmcs::exit_reason::basic_exit_reason::exception_or_non_maskable_interrupt,
             handler_delegate_t::create<mafia::intel_x64::handle_exception_or_non_maskable_interrupt>()
+        );
+
+        exit_handler()->add_handler(
+            ::intel_x64::vmcs::exit_reason::basic_exit_reason::init_signal,
+            handler_delegate_t::create<mafia::intel_x64::handle_init_signal>()
         );
 
         // trap page fault
@@ -83,7 +96,7 @@ public:
 
         //change ia32_lstar to MAGIC VALUE
         // so that PF happen when syscall
-        //::x64::msrs::ia32_lstar::set(mafia::intel_x64::yaju);
+        ::x64::msrs::ia32_lstar::set(MAGIC_LSTAR_VALUE);
     }
     ~mafia_vcpu() = default;
 };
