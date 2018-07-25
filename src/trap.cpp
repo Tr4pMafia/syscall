@@ -47,7 +47,7 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
         bfdebug_info(0, "syscall happend!");
         return advance4syscall(vmcs);
     }
-    return advance(vmcs);
+    return true;
 }
 
 static bool
