@@ -47,17 +47,32 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
         bfdebug_info(0, "syscall happend!");
         return advance4syscall(vmcs);
     }
+
     using namespace ::intel_x64::vmcs;
-    // reinject
-    vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
+    /*
+    if(vm_entry_interruption_information::valid_bit::is_disabled() &&
+       vm_entry_interruption_information::interruption_type::get() == vm_entry_interruption_information::interruption_type::hardware_exception &&
+       vm_entry_interruption_information::vector::get() == (1u << 14)) {
+        vm_entry_interruption_information::vector::set((1u << 8));
+        vm_entry_exception_error_code::set(0);    
+    } else {*/
+        vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
+        vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
+    //}
+
     vm_entry_interruption_information::interruption_type::set(vm_exit_interruption_information::interruption_type::get());
     vm_entry_interruption_information::deliver_error_code_bit::set(false);
     vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
     vm_entry_interruption_information::valid_bit::set(true);
 
-    vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
-
     return true;
+}
+
+static bool
+handle_init_signal(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+{
+    // [NOTE] do nothing here, but is it correct??
+    return advance(vmcs);
 }
 
 class mafia_vcpu : public bfvmm::intel_x64::vcpu
@@ -66,11 +81,16 @@ public:
     mafia_vcpu(vcpuid::type id)
     : bfvmm::intel_x64::vcpu{id}
     {
+
+	::intel_x64::vmcs::guest_interruptibility_state::blocking_by_nmi::enable();
         exit_handler()->add_handler(
             ::intel_x64::vmcs::exit_reason::basic_exit_reason::exception_or_non_maskable_interrupt,
             handler_delegate_t::create<mafia::intel_x64::handle_exception_or_non_maskable_interrupt>()
         );
-
+        exit_handler()->add_handler(
+            ::intel_x64::vmcs::exit_reason::basic_exit_reason::init_signal,
+            handler_delegate_t::create<mafia::intel_x64::handle_init_signal>()
+        );
         // trap page fault
         ::intel_x64::vmcs::exception_bitmap::set((1u << 14));
 
@@ -86,7 +106,7 @@ public:
 
         //change ia32_lstar to MAGIC VALUE
         // so that PF happen when syscall
-        //::x64::msrs::ia32_lstar::set(MAGIC_LSTAR_VALUE);
+        ::x64::msrs::ia32_lstar::set(MAGIC_LSTAR_VALUE);
     }
     ~mafia_vcpu() = default;
 };
