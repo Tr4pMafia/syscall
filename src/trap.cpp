@@ -54,7 +54,7 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
        vm_entry_interruption_information::interruption_type::get() == vm_entry_interruption_information::interruption_type::hardware_exception &&
        vm_entry_interruption_information::vector::get() == (1u << 14)) {
         vm_entry_interruption_information::vector::set((1u << 8));
-        vm_entry_exception_error_code::set(0);    
+        vm_entry_exception_error_code::set(0);
     } else {*/
         vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
         vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
@@ -104,9 +104,12 @@ public:
         bfdebug_nhex(0, "lstar", ia32_lstar);
         mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
 
+        // check whether syscall is enabled
+        ::intel_x64::cpuid::ext_feature_info::edx::syscall_sysret::dump();
+
         //change ia32_lstar to MAGIC VALUE
         // so that PF happen when syscall
-        ::x64::msrs::ia32_lstar::set(MAGIC_LSTAR_VALUE);
+        //::x64::msrs::ia32_lstar::set(MAGIC_LSTAR_VALUE);
     }
     ~mafia_vcpu() = default;
 };
