@@ -20,6 +20,6 @@
 #define MAFIA_ASM_H
 
 #define MAX_VCPU_NUM 15
-#define MAGIC_LSTAR_VALUE 0x114514ULL
+#define MAGIC_LSTAR_VALUE 0xffffeb1111111111ULL
 
 #endif

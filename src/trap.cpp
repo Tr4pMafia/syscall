@@ -49,17 +49,8 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
     }
 
     using namespace ::intel_x64::vmcs;
-    /*
-    if(vm_entry_interruption_information::valid_bit::is_disabled() &&
-       vm_entry_interruption_information::interruption_type::get() == vm_entry_interruption_information::interruption_type::hardware_exception &&
-       vm_entry_interruption_information::vector::get() == (1u << 14)) {
-        vm_entry_interruption_information::vector::set((1u << 8));
-        vm_entry_exception_error_code::set(0);
-    } else {*/
-        vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
-        vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
-    //}
-
+    vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
+    vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
     vm_entry_interruption_information::interruption_type::set(vm_exit_interruption_information::interruption_type::get());
     vm_entry_interruption_information::deliver_error_code_bit::set(false);
     vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
@@ -101,7 +92,7 @@ public:
 
         // save original ia32_lstar
         uint64_t ia32_lstar = ::x64::msrs::ia32_lstar::get();
-        bfdebug_nhex(0, "lstar", ia32_lstar);
+        // bfdebug_nhex(0, "lstar", ia32_lstar);
         mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
 
         // check whether syscall is enabled
