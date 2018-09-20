@@ -31,7 +31,6 @@ namespace mafia
 namespace intel_x64
 {
 static std::vector<uint64_t> original_ia32_lstar(MAX_VCPU_NUM);
-
 static bool
 advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
@@ -41,18 +40,19 @@ advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 
 static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
-{
+{	
     uint64_t cr2 = ::intel_x64::cr2::get();
-    if(cr2 == MAGIC_LSTAR_VALUE) {
+   if(cr2 == MAGIC_LSTAR_VALUE) {
         bfdebug_info(0, "syscall happend!");
-        return advance4syscall(vmcs);
+        ::intel_x64::cr2::set(mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid]);
+	return advance4syscall(vmcs);
     }
 
     using namespace ::intel_x64::vmcs;
     vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
     vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
     vm_entry_interruption_information::interruption_type::set(vm_exit_interruption_information::interruption_type::get());
-    vm_entry_interruption_information::deliver_error_code_bit::set(false);
+    vm_entry_interruption_information::deliver_error_code_bit::set(vm_exit_interruption_information::error_code_valid::is_enabled());
     vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
     vm_entry_interruption_information::valid_bit::set(true);
 
@@ -87,16 +87,13 @@ public:
 
         // trap page fault when I/D flag is present
         //"the access causing the page-fault exception was an instruction fetch"
-        ::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
+        
+	::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
         ::intel_x64::vmcs::page_fault_error_code_match::set(0xffffffff);
-
-        // save original ia32_lstar
+        
+	// save original ia32_lstar
         uint64_t ia32_lstar = ::x64::msrs::ia32_lstar::get();
-        // bfdebug_nhex(0, "lstar", ia32_lstar);
         mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
-
-        // check whether syscall is enabled
-        ::intel_x64::cpuid::ext_feature_info::edx::syscall_sysret::dump();
 
         //change ia32_lstar to MAGIC VALUE
         // so that PF happen when syscall
