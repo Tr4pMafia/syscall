@@ -52,7 +52,7 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
     using namespace ::intel_x64::vmcs;
     vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
     vm_entry_interruption_information::interruption_type::set(vm_exit_interruption_information::interruption_type::get());
-    vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
+    //vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
     vm_entry_interruption_information::valid_bit::enable();
     
     vm_entry_interruption_information::deliver_error_code_bit::enable();
