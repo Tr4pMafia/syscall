@@ -31,7 +31,6 @@ namespace mafia
 namespace intel_x64
 {
 static std::vector<uint64_t> original_ia32_lstar(MAX_VCPU_NUM);
-
 static bool
 advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
@@ -42,22 +41,28 @@ advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
 {
-    uint64_t cr2 = ::intel_x64::cr2::get();
-    if(cr2 == MAGIC_LSTAR_VALUE) {
+   bfdebug_info(0, "hi");
+   uint64_t cr2 = ::intel_x64::cr2::get();
+   if(cr2 == MAGIC_LSTAR_VALUE) {
         bfdebug_info(0, "syscall happend!");
-        return advance4syscall(vmcs);
-    }
+        ::intel_x64::cr2::set(mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid]);
+	return advance4syscall(vmcs);
+   }
     using namespace ::intel_x64::vmcs;
-    // reinject
     vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
+    vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
     vm_entry_interruption_information::interruption_type::set(vm_exit_interruption_information::interruption_type::get());
-    vm_entry_interruption_information::deliver_error_code_bit::set(false);
+    vm_entry_interruption_information::deliver_error_code_bit::set(vm_exit_interruption_information::error_code_valid::is_enabled());
     vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
     vm_entry_interruption_information::valid_bit::set(true);
-
-    vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
-
     return true;
+}
+
+static bool
+handle_init_signal(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+{
+    // [NOTE] do nothing here, but is it correct??
+    return advance(vmcs);
 }
 
 class mafia_vcpu : public bfvmm::intel_x64::vcpu
@@ -66,22 +71,30 @@ public:
     mafia_vcpu(vcpuid::type id)
     : bfvmm::intel_x64::vcpu{id}
     {
+
+	::intel_x64::vmcs::guest_interruptibility_state::blocking_by_nmi::enable();
         exit_handler()->add_handler(
             ::intel_x64::vmcs::exit_reason::basic_exit_reason::exception_or_non_maskable_interrupt,
             handler_delegate_t::create<mafia::intel_x64::handle_exception_or_non_maskable_interrupt>()
         );
-
+        exit_handler()->add_handler(
+            ::intel_x64::vmcs::exit_reason::basic_exit_reason::init_signal,
+            handler_delegate_t::create<mafia::intel_x64::handle_init_signal>()
+        );
         // trap page fault
         ::intel_x64::vmcs::exception_bitmap::set((1u << 14));
 
         // trap page fault when I/D flag is present
         //"the access causing the page-fault exception was an instruction fetch"
-        ::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
-        ::intel_x64::vmcs::page_fault_error_code_match::set(0xffffffff);
+	::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
+        ::intel_x64::vmcs::page_fault_error_code_match::set((1u << 4));
+        ::intel_x64::vmcs::page_fault_error_code_mask::dump(0);
+        ::intel_x64::vmcs::page_fault_error_code_match::dump(0);
+        
 
-        // save original ia32_lstar
+	// save original ia32_lstar
         uint64_t ia32_lstar = ::x64::msrs::ia32_lstar::get();
-        bfdebug_nhex(0, "lstar", ia32_lstar);
+	bfdebug_nhex(0, "lstar value", ia32_lstar);
         mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
 
         //change ia32_lstar to MAGIC VALUE
