@@ -42,7 +42,7 @@ advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
-   uint64_t cr2 = ::intel_x64::cr2::get();
+   //uint64_t cr2 = ::intel_x64::cr2::get();
    /*
    if(cr2 == MAGIC_LSTAR_VALUE) {
         bfdebug_info(0, "syscall happend!");
@@ -54,7 +54,6 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
     vm_entry_interruption_information::interruption_type::set(vm_exit_interruption_information::interruption_type::get());
     //vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
     vm_entry_interruption_information::valid_bit::enable();
-    
     vm_entry_interruption_information::deliver_error_code_bit::enable();
     vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
 
@@ -65,6 +64,7 @@ static bool
 handle_init_signal(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
 {
     // [NOTE] do nothing here, but is it correct??
+    bfdebug_info(0, "init");
     return advance(vmcs);
 }
 
@@ -93,7 +93,6 @@ public:
        	::intel_x64::vmcs::page_fault_error_code_mask::dump(0);
         ::intel_x64::vmcs::page_fault_error_code_match::dump(0);
         
-
 	// save original ia32_lstar
         uint64_t ia32_lstar = ::x64::msrs::ia32_lstar::get();
 	bfdebug_nhex(0, "lstar value", ia32_lstar);
