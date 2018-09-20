@@ -39,9 +39,8 @@ advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 }
 
 static bool
-handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs)
+handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
-   bfdebug_info(0, "hi");
    uint64_t cr2 = ::intel_x64::cr2::get();
    if(cr2 == MAGIC_LSTAR_VALUE) {
         bfdebug_info(0, "syscall happend!");
@@ -76,19 +75,19 @@ public:
         exit_handler()->add_handler(
             ::intel_x64::vmcs::exit_reason::basic_exit_reason::exception_or_non_maskable_interrupt,
             handler_delegate_t::create<mafia::intel_x64::handle_exception_or_non_maskable_interrupt>()
-        );
+        );/*
         exit_handler()->add_handler(
             ::intel_x64::vmcs::exit_reason::basic_exit_reason::init_signal,
             handler_delegate_t::create<mafia::intel_x64::handle_init_signal>()
-        );
+        );*/
         // trap page fault
         ::intel_x64::vmcs::exception_bitmap::set((1u << 14));
 
         // trap page fault when I/D flag is present
-        //"the access causing the page-fault exception was an instruction fetch"
+        //the access causing the page-fault exception was an instruction fetch
 	::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
         ::intel_x64::vmcs::page_fault_error_code_match::set((1u << 4));
-        ::intel_x64::vmcs::page_fault_error_code_mask::dump(0);
+       	::intel_x64::vmcs::page_fault_error_code_mask::dump(0);
         ::intel_x64::vmcs::page_fault_error_code_match::dump(0);
         
 
