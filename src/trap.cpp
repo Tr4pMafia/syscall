@@ -31,7 +31,7 @@ namespace mafia
 namespace intel_x64
 {
 static std::vector<uint64_t> original_ia32_lstar(MAX_VCPU_NUM);
-
+static int pf_count = 0;
 static bool
 advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
@@ -42,21 +42,28 @@ advance4syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
-   //uint64_t cr2 = ::intel_x64::cr2::get();
+   uint64_t cr2 = ::intel_x64::cr2::get();
    /*
    if(cr2 == MAGIC_LSTAR_VALUE) {
         bfdebug_info(0, "syscall happend!");
         ::intel_x64::cr2::set(mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid]);
 	return advance4syscall(vmcs);
    }*/
+    // bfdebug_nhex(0, "cr2", cr2);
     using namespace ::intel_x64::vmcs;
     vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
-    vm_entry_interruption_information::interruption_type::set(vm_exit_interruption_information::interruption_type::get());
-    //vm_entry_interruption_information::reserved::set(vm_exit_interruption_information::reserved::get());
+    vm_entry_interruption_information::interruption_type::set(vm_entry_interruption_information::interruption_type::hardware_exception);
     vm_entry_interruption_information::valid_bit::enable();
     vm_entry_interruption_information::deliver_error_code_bit::enable();
     vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
-
+    ::intel_x64::cr2::set(cr2);
+    if(pf_count < 100){
+        vm_entry_interruption_information::dump(0);
+	vm_entry_exception_error_code::dump(0);
+	vm_entry_instruction_length::dump(0);
+	bfdebug_nhex(0, "cr2", cr2);
+	pf_count++;
+    }
     return true;
 }
 
