@@ -43,27 +43,23 @@ static bool
 handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
    uint64_t cr2 = ::intel_x64::cr2::get();
-   /*
-   if(cr2 == MAGIC_LSTAR_VALUE) {
-        bfdebug_info(0, "syscall happend!");
-        ::intel_x64::cr2::set(mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid]);
-	return advance4syscall(vmcs);
-   }*/
-    // bfdebug_nhex(0, "cr2", cr2);
     using namespace ::intel_x64::vmcs;
+
     vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
     vm_entry_interruption_information::interruption_type::set(vm_entry_interruption_information::interruption_type::hardware_exception);
     vm_entry_interruption_information::valid_bit::enable();
     vm_entry_interruption_information::deliver_error_code_bit::enable();
     vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
     ::intel_x64::cr2::set(cr2);
+
     if(pf_count < 100){
         vm_entry_interruption_information::dump(0);
-	vm_entry_exception_error_code::dump(0);
-	vm_entry_instruction_length::dump(0);
-	bfdebug_nhex(0, "cr2", cr2);
-	pf_count++;
+        vm_entry_exception_error_code::dump(0);
+        vm_entry_instruction_length::dump(0);
+        bfdebug_nhex(0, "cr2", cr2);
+        pf_count++;
     }
+
     return true;
 }
 
@@ -95,14 +91,14 @@ public:
 
         // trap page fault when I/D flag is present
         //the access causing the page-fault exception was an instruction fetch
-	::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
+        ::intel_x64::vmcs::page_fault_error_code_mask::set((1u << 4));
         ::intel_x64::vmcs::page_fault_error_code_match::set((1u << 4));
        	::intel_x64::vmcs::page_fault_error_code_mask::dump(0);
         ::intel_x64::vmcs::page_fault_error_code_match::dump(0);
-        
-	// save original ia32_lstar
+
+        // save original ia32_lstar
         uint64_t ia32_lstar = ::x64::msrs::ia32_lstar::get();
-	bfdebug_nhex(0, "lstar value", ia32_lstar);
+        bfdebug_nhex(0, "lstar value", ia32_lstar);
         mafia::intel_x64::original_ia32_lstar[id] = ia32_lstar;
 
         //change ia32_lstar to MAGIC VALUE
