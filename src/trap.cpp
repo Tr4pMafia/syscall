@@ -41,7 +41,7 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
         if(vmcs->save_state()->rax == 59){
             bfdebug_nhex(0, "execve syscall happend!", vmcs->save_state()->rdi);
         }
-        vmcs->save_state()->rip = mafia::intel_x64::original_ia32_lstar[vmcs->vcpuid];
+        vmcs->save_state()->rip = mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid];
         return true;
     }
     using namespace ::intel_x64::vmcs;
