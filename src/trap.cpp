@@ -44,7 +44,6 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
         vmcs->save_state()->rip = mafia::intel_x64::original_ia32_lstar[vmcs->vcpuid];
         return true;
     }
-    
     using namespace ::intel_x64::vmcs;
 
     vm_entry_interruption_information::vector::set(vm_exit_interruption_information::vector::get());
