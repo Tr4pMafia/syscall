@@ -34,14 +34,20 @@ static std::vector<uint64_t> original_ia32_lstar(MAX_VCPU_NUM);
 static int pf_count = 0;
 
 static bool
-handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
+restore_ia32_lstar(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
+{
+    ::x64::msrs::ia32_lstar::set(original_ia32_lstar[vmcs->save_state()->vcpuid]);
+    return true
+}
+
+static bool trap_syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
     uint64_t cr2 = ::intel_x64::cr2::get();
     if(vmcs->save_state()->rip == MAGIC_LSTAR_VALUE) {
         if(vmcs->save_state()->rax == 59){
             bfdebug_nhex(0, "execve syscall happend!", vmcs->save_state()->rdi);
         }
-        vmcs->save_state()->rip = mafia::intel_x64::original_ia32_lstar[vmcs->save_state()->vcpuid];
+        vmcs->save_state()->rip = original_ia32_lstar[vmcs->save_state()->vcpuid];
         return true;
     }
     using namespace ::intel_x64::vmcs;
@@ -51,7 +57,7 @@ handle_exception_or_non_maskable_interrupt(gsl::not_null<bfvmm::intel_x64::vmcs 
     vm_entry_interruption_information::valid_bit::enable();
     vm_entry_interruption_information::deliver_error_code_bit::enable();
     vm_entry_exception_error_code::set(vm_exit_interruption_error_code::get());
-    ::intel_x64::cr2::set(cr2);
+    ::intel_x64::cr2::set(vmcs->save_state()->rip);
 
     if(pf_count < 2){
         // vmexit
@@ -81,8 +87,10 @@ public:
 
         exit_handler()->add_handler(
             ::intel_x64::vmcs::exit_reason::basic_exit_reason::exception_or_non_maskable_interrupt,
-            handler_delegate_t::create<mafia::intel_x64::handle_exception_or_non_maskable_interrupt>()
-        );
+            handler_delegate_t::create<mafia::intel_x64::trap_syscall>());
+        exit_handler()->add_handler(
+            ::intel_x64::vmcs::exit_reason::basic_exit_reason::vmxoff,
+            handler_delegate_t::create<mafia::intel_x64::restore_ia32_lstar>());
 
         // trap page fault
         ::intel_x64::vmcs::exception_bitmap::set((1u << 14));
