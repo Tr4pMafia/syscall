@@ -37,7 +37,7 @@ static bool
 restore_ia32_lstar(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
 {
     ::x64::msrs::ia32_lstar::set(original_ia32_lstar[vmcs->save_state()->vcpuid]);
-    return true
+    return false;
 }
 
 static bool trap_syscall(gsl::not_null<bfvmm::intel_x64::vmcs *> vmcs) noexcept
