@@ -16,7 +16,7 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-#include <bfvmm/hve/arch/intel_x64/vcpu/vcpu.h>
+#include <bfvmm/hve/arch/intel_x64/vcpu.h>
 #include <bfvmm/vcpu/vcpu.h>
 #include <bfdebug.h>
 #include <bfvmm/vcpu/vcpu_factory.h>
@@ -24,7 +24,7 @@
 #include <bfstring.h>
 #include <string>
 #include <vector>
-#include<consts.h>
+#include <consts.h>
 
 namespace mafia
 {
@@ -118,7 +118,7 @@ public:
 namespace bfvmm
 {
 std::unique_ptr<bfvmm::vcpu>
-vcpu_factory::make_vcpu(vcpuid::type vcpuid, bfobject *obj)
+vcpu_factory::make(vcpuid::type vcpuid, bfobject *obj)
 {
     bfignored(obj);
     return std::make_unique<mafia::intel_x64::mafia_vcpu>(vcpuid);
